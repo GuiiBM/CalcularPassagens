@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculadora de Passagens — Litoral Norte SP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ocean: #0a1628;
+      --deep: #0d1f3c;
+      --wave: #1a3a5c;
+      --foam: #e8f4f8;
+      --sun: #f4a823;
+      --coral: #e85d3a;
+      --mint: #4ecdc4;
+      --white: #ffffff;
+      --line-a: #4ecdc4;
+      --line-b: #f4a823;
+    }
+
+    body {
+      background: var(--ocean);
+      color: var(--foam);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 40% at 20% 80%, rgba(78,205,196,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(244,168,35,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .header-tag {
+      display: inline-block;
+      background: var(--wave);
+      border: 1px solid rgba(78,205,196,0.3);
+      color: var(--mint);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(44px, 11vw, 72px);
+      line-height: 0.9;
+      color: var(--white);
+    }
+
+    h1 span { color: var(--mint); }
+
+    .subtitle {
+      margin-top: 12px;
+      font-size: 14px;
+      color: rgba(232,244,248,0.5);
+      font-weight: 300;
+    }
+
+    .routes-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+      animation: fadeUp 0.5s 0.1s ease both;
+    }
+
+    .route-badge {
+      background: var(--deep);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+
+    .route-badge.line-a { border-top: 3px solid var(--line-a); }
+    .route-badge.line-b { border-top: 3px solid var(--line-b); }
+
+    .route-badge .rl { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.45; }
+    .route-badge .rn { font-size: 13px; font-weight: 500; color: var(--white); margin-top: 3px; }
+    .route-badge .rp { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin-top: 6px; }
+    .route-badge.line-a .rp { color: var(--line-a); }
+    .route-badge.line-b .rp { color: var(--line-b); }
+
+    .builder-card {
+      background: var(--deep);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px;
+      padding: 26px;
+      margin-bottom: 14px;
+      animation: fadeUp 0.5s 0.15s ease both;
+    }
+
+    .builder-card h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .sec-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: rgba(232,244,248,0.35);
+      margin: 18px 0 10px;
+    }
+
+    .sec-label:first-of-type { margin-top: 0; }
+
+    .trip-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      gap: 12px;
+    }
+
+    .trip-row:last-of-type { border-bottom: none; }
+
+    .trip-info { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+    .trip-name {
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .trip-sub { font-size: 11px; color: rgba(232,244,248,0.38); padding-left: 14px; }
+
+    .counter {
+      display: flex;
+      align-items: center;
+      background: var(--wave);
+      border-radius: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .counter button {
+      width: 34px; height: 34px;
+      background: none; border: none;
+      color: var(--white); font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .counter button:hover { background: rgba(255,255,255,0.1); }
+
+    .counter input {
+      width: 38px;
+      text-align: center;
+      background: none; border: none;
+      color: var(--white);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      outline: none;
+    }
+
+    .counter input::-webkit-inner-spin-button,
+    .counter input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 20px 0;
+      color: rgba(232,244,248,0.2);
+      font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+    }
+
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06);
+    }
+
+    .btn-reset {
+      display: block; width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      color: rgba(232,244,248,0.45);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 18px;
+    }
+
+    .btn-reset:hover {
+      background: rgba(78,205,196,0.08);
+      border-color: rgba(78,205,196,0.3);
+      color: var(--mint);
+    }
+
+    /* RESULT */
+    .result-card {
+      background: linear-gradient(140deg, var(--wave), #0f2a46);
+      border: 1px solid rgba(78,205,196,0.18);
+      border-radius: 20px;
+      padding: 26px;
+      animation: fadeUp 0.5s 0.2s ease both;
+    }
+
+    .result-card h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; letter-spacing: 1px;
+      margin-bottom: 18px;
+    }
+
+    .empty-state {
+      text-align: center; padding: 28px;
+      color: rgba(232,244,248,0.28); font-size: 14px;
+    }
+
+    .breakdown { margin-bottom: 20px; }
+
+    .bd-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px; color: rgba(232,244,248,0.6);
+    }
+
+    .bd-item:last-child { border-bottom: none; }
+
+    .bd-left { display: flex; align-items: center; gap: 8px; }
+
+    .qty { background: rgba(255,255,255,0.07); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--white); }
+
+    .bd-price { font-weight: 600; color: var(--white); }
+
+    .line-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+
+    .ltb {
+      border-radius: 14px; padding: 15px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+
+    .ltb.la { background: rgba(78,205,196,0.08); border: 1px solid rgba(78,205,196,0.22); }
+    .ltb.lb { background: rgba(244,168,35,0.08); border: 1px solid rgba(244,168,35,0.22); }
+
+    .ltb .ll { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.55; }
+    .ltb.la .ll { color: var(--line-a); }
+    .ltb.lb .ll { color: var(--line-b); }
+
+    .ltb .lr { font-size: 12px; color: var(--white); font-weight: 500; margin-top: 1px; }
+    .ltb .lv { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin-top: 4px; }
+    .ltb.la .lv { color: var(--line-a); }
+    .ltb.lb .lv { color: var(--line-b); }
+
+    .ltb .lt { font-size: 11px; color: rgba(232,244,248,0.35); }
+
+    .grand {
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px; padding: 16px 18px;
+    }
+
+    .grand .gl { font-weight: 600; font-size: 14px; color: var(--white); }
+    .grand .gv { font-family: 'Bebas Neue', sans-serif; font-size: 38px; color: var(--mint); }
+
+    .trips-badge {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: rgba(167,139,250,0.1);
+      border: 1px solid rgba(167,139,250,0.25);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-size: 13px; color: rgba(232,244,248,0.7);
+    }
+
+    .trips-badge strong {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; color: #a78bfa;
+      line-height: 1;
+    }
+
+    .value-card {
+      background: var(--deep);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px;
+      padding: 26px;
+      margin-bottom: 14px;
+      animation: fadeUp 0.5s 0.25s ease both;
+    }
+
+    .value-card h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .value-input-wrap {
+      display: flex; align-items: center;
+      background: var(--wave);
+      border-radius: 12px;
+      padding: 0 16px;
+      gap: 8px;
+    }
+
+    .value-input-wrap span {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; color: var(--mint);
+    }
+
+    .value-input-wrap input {
+      flex: 1; background: none; border: none;
+      color: var(--white);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px; padding: 12px 0;
+      outline: none;
+    }
+
+    .value-input-wrap input::placeholder { color: rgba(255,255,255,0.2); }
+
+    .split-result {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-top: 16px;
+    }
+
+    .split-item {
+      border-radius: 14px; padding: 15px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+
+    .split-item.la { background: rgba(78,205,196,0.08); border: 1px solid rgba(78,205,196,0.22); }
+    .split-item.lb { background: rgba(244,168,35,0.08); border: 1px solid rgba(244,168,35,0.22); }
+
+    .split-item .sl { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.55; }
+    .split-item.la .sl { color: var(--line-a); }
+    .split-item.lb .sl { color: var(--line-b); }
+
+    .split-item .sv { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin-top: 4px; }
+    .split-item.la .sv { color: var(--line-a); }
+    .split-item.lb .sv { color: var(--line-b); }
+
+    .split-item .st { font-size: 11px; color: rgba(232,244,248,0.35); }
+
+    footer {
+      text-align: center; margin-top: 44px;
+      font-size: 11px; color: rgba(232,244,248,0.18);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="header-tag">🚌 Litoral Norte SP</div>
+    <h1>CALCULA<span>PASSAGEM</span></h1>
+    <p class="subtitle">Ubatuba · Caraguatatuba · São Sebastião</p>
+  </header>
+
+  <div class="routes-info">
+    <div class="route-badge line-a">
+      <div class="rl">Linha A</div>
+      <div class="rn">Ubatuba ↔ Caraguatatuba</div>
+      <div class="rp">R$ 6,40</div>
+    </div>
+    <div class="route-badge line-b">
+      <div class="rl">Linha B</div>
+      <div class="rn">Caraguatatuba ↔ São Sebastião</div>
+      <div class="rp">R$ 3,70</div>
+    </div>
+  </div>
+
+   <div class="value-card">
+    <h2>💵 CALCULAR POR VALOR</h2>
+    <div class="value-input-wrap">
+      <span>R$</span>
+      <input type="number" id="valor-input" placeholder="0,00" min="0" step="0.01" oninput="calcByValue()"/>
+    </div>
+    <div id="split-result"></div>
+  </div>
+
+  <div class="builder-card">
+    <h2>🗺️ MONTE SUA VIAGEM</h2>
+
+    <div class="sec-label">Viagem completa — Ubatuba ↔ São Sebastião</div>
+
+    <div class="trip-row">
+      <div class="trip-info">
+        <span class="trip-name">
+          <span class="dot" style="background:#a78bfa"></span>
+          Ida e volta completa
+        </span>
+        <span class="trip-sub">Ubatuba→Caraguá→SS e SS→Caraguá→Ubatuba = R$ 20,20</span>
+      </div>
+      <div class="counter">
+        <button onclick="change('full_rt', -1)">−</button>
+        <input type="number" id="full_rt" value="0" min="0" oninput="update()"/>
+        <button onclick="change('full_rt', 1)">+</button>
+      </div>
+    </div>
+
+    <div class="divider">ou trechos individuais</div>
+
+    <div class="sec-label">Linha A — Ubatuba ↔ Caraguatatuba (R$ 6,40 por trecho)</div>
+
+    <div class="trip-row">
+      <div class="trip-info">
+        <span class="trip-name"><span class="dot" style="background:var(--line-a)"></span>Ida: Ubatuba → Caraguatatuba</span>
+      </div>
+      <div class="counter">
+        <button onclick="change('a_uba_cg', -1)">−</button>
+        <input type="number" id="a_uba_cg" value="0" min="0" oninput="update()"/>
+        <button onclick="change('a_uba_cg', 1)">+</button>
+      </div>
+    </div>
+
+    <div class="trip-row">
+      <div class="trip-info">
+        <span class="trip-name"><span class="dot" style="background:var(--line-a)"></span>Volta: Caraguatatuba → Ubatuba</span>
+      </div>
+      <div class="counter">
+        <button onclick="change('a_cg_uba', -1)">−</button>
+        <input type="number" id="a_cg_uba" value="0" min="0" oninput="update()"/>
+        <button onclick="change('a_cg_uba', 1)">+</button>
+      </div>
+    </div>
+
+    <div class="sec-label" style="margin-top:18px">Linha B — Caraguatatuba ↔ São Sebastião (R$ 3,70 por trecho)</div>
+
+    <div class="trip-row">
+      <div class="trip-info">
+        <span class="trip-name"><span class="dot" style="background:var(--line-b)"></span>Ida: Caraguatatuba → São Sebastião</span>
+      </div>
+      <div class="counter">
+        <button onclick="change('b_cg_ss', -1)">−</button>
+        <input type="number" id="b_cg_ss" value="0" min="0" oninput="update()"/>
+        <button onclick="change('b_cg_ss', 1)">+</button>
+      </div>
+    </div>
+
+    <div class="trip-row">
+      <div class="trip-info">
+        <span class="trip-name"><span class="dot" style="background:var(--line-b)"></span>Volta: São Sebastião → Caraguatatuba</span>
+      </div>
+      <div class="counter">
+        <button onclick="change('b_ss_cg', -1)">−</button>
+        <input type="number" id="b_ss_cg" value="0" min="0" oninput="update()"/>
+        <button onclick="change('b_ss_cg', 1)">+</button>
+      </div>
+    </div>
+
+    <button class="btn-reset" onclick="resetAll()">↺ Zerar tudo</button>
+  </div>
+
+  <div class="result-card">
+    <h2>💰 RESUMO DO VALOR</h2>
+    <div id="result-body">
+      <div class="empty-state">Adicione viagens acima para calcular 👆</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Calculadora de passagens · Litoral Norte SP</footer>
+
+<script>
+  const PA = 6.40;
+  const PB = 3.70;
+
+  function change(id, delta) {
+    const el = document.getElementById(id);
+    el.value = Math.max(0, (parseInt(el.value) || 0) + delta);
+    update();
+  }
+
+  function g(id) { return Math.max(0, parseInt(document.getElementById(id).value) || 0); }
+
+  function fmt(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); }
+
+  function resetAll() {
+    ['full_rt','a_uba_cg','a_cg_uba','b_cg_ss','b_ss_cg'].forEach(id => document.getElementById(id).value = 0);
+    update();
+  }
+
+  function update() {
+    const full = g('full_rt');
+    const aUC  = g('a_uba_cg');
+    const aCU  = g('a_cg_uba');
+    const bCS  = g('b_cg_ss');
+    const bSC  = g('b_ss_cg');
+
+    const totalTicketsA = full * 2 + aUC + aCU;
+    const totalTicketsB = full * 2 + bCS + bSC;
+    const valA = totalTicketsA * PA;
+    const valB = totalTicketsB * PB;
+    const grand = valA + valB;
+
+    const rb = document.getElementById('result-body');
+
+    if (full + aUC + aCU + bCS + bSC === 0) {
+      rb.innerHTML = '<div class="empty-state">Adicione viagens acima para calcular 👆</div>';
+      return;
+    }
+
+    // Breakdown rows
+    const rows = [
+      { label: 'Ida+volta completa — Linha A (×2 trechos)', qty: full * 2, price: PA, cls: 'fa', show: full > 0 },
+      { label: 'Ida+volta completa — Linha B (×2 trechos)', qty: full * 2, price: PB, cls: 'fb', show: full > 0 },
+      { label: 'Ida Ubatuba → Caraguatatuba',               qty: aUC,      price: PA, cls: 'fa', show: aUC > 0 },
+      { label: 'Volta Caraguatatuba → Ubatuba',             qty: aCU,      price: PA, cls: 'fa', show: aCU > 0 },
+      { label: 'Ida Caraguatatuba → São Sebastião',         qty: bCS,      price: PB, cls: 'fb', show: bCS > 0 },
+      { label: 'Volta São Sebastião → Caraguatatuba',       qty: bSC,      price: PB, cls: 'fb', show: bSC > 0 },
+    ].filter(r => r.show);
+
+    let bdHTML = '<div class="breakdown">';
+    let parts = [];
+
+    rows.forEach(r => {
+      bdHTML += `
+        <div class="bd-item">
+          <span class="bd-left">
+            <span class="qty">${r.qty}×</span>
+            <span>${r.label}</span>
+          </span>
+          <span class="bd-price">${fmt(r.qty * r.price)}</span>
+        </div>`;
+      for (let i = 0; i < r.qty; i++) {
+        parts.push(`<span class="${r.cls}">${r.price.toFixed(2).replace('.', ',')}</span>`);
+      }
+    });
+
+    bdHTML += '</div>';
+
+    const completeTrips = Math.floor(Math.min(totalTicketsA, totalTicketsB) / 2);
+
+    const ltHTML = `
+      <div class="line-totals">
+        <div class="ltb la">
+          <div class="ll">Linha A</div>
+          <div class="lr">Ubatuba ↔ Caraguatatuba</div>
+          <div class="lv">${fmt(valA)}</div>
+          <div class="lt">${totalTicketsA} passagem${totalTicketsA !== 1 ? 's' : ''} × R$ 6,40</div>
+        </div>
+        <div class="ltb lb">
+          <div class="ll">Linha B</div>
+          <div class="lr">Caraguatatuba ↔ São Sebastião</div>
+          <div class="lv">${fmt(valB)}</div>
+          <div class="lt">${totalTicketsB} passagem${totalTicketsB !== 1 ? 's' : ''} × R$ 3,70</div>
+        </div>
+      </div>`;
+
+    const gHTML = `
+      <div class="grand">
+        <span class="gl">Total a carregar</span>
+        <span class="gv">${fmt(grand)}</span>
+      </div>
+      <div class="trips-badge">
+        🚌 <strong>${completeTrips}</strong> viagem${completeTrips !== 1 ? 's' : ''} completa${completeTrips !== 1 ? 's' : ''} (Ubatuba ↔ São Sebastião)
+      </div>`;
+
+    rb.innerHTML = bdHTML + ltHTML + gHTML;
+  }
+
+  function calcByValue() {
+    const val = parseFloat(document.getElementById('valor-input').value) || 0;
+    const sr = document.getElementById('split-result');
+    if (val <= 0) { sr.innerHTML = ''; return; }
+
+    // Trabalha em centavos para evitar erros de ponto flutuante
+    const cents = Math.round(val * 100);
+    const cA = Math.round(PA * 100);
+    const cB = Math.round(PB * 100);
+    const totalAB = cA + cB;
+    const sets = Math.floor(cents / totalAB);
+    const resto = cents - sets * totalAB;
+    const extraA = resto >= cA ? 1 : 0;
+    const extraB = (resto - extraA * cA) >= cB ? 1 : 0;
+
+    const qA = sets + extraA;
+    const qB = sets + extraB;
+    const vA = qA * PA;
+    const vB = qB * PB;
+
+    const completeTripsVal = Math.floor(Math.min(qA, qB) / 2);
+
+    sr.innerHTML = `
+      <div class="split-result">
+        <div class="split-item la">
+          <div class="sl">Linha A</div>
+          <div class="sv">${fmt(vA)}</div>
+          <div class="st">${qA} passagem${qA !== 1 ? 's' : ''} × R$ 6,40</div>
+        </div>
+        <div class="split-item lb">
+          <div class="sl">Linha B</div>
+          <div class="sv">${fmt(vB)}</div>
+          <div class="st">${qB} passagem${qB !== 1 ? 's' : ''} × R$ 3,70</div>
+        </div>
+      </div>
+      <div class="trips-badge">
+        🚌 <strong>${completeTripsVal}</strong> viagem${completeTripsVal !== 1 ? 's' : ''} completa${completeTripsVal !== 1 ? 's' : ''} (Ubatuba ↔ São Sebastião)
+      </div>`;
+  }
+
+  update();
+</script>
+</body>
+</html>
