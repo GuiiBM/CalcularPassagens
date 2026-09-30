@@ -3,498 +3,625 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Calculadora de Passagens — Litoral Norte SP</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+  <meta name="theme-color" content="#f2ede3"/>
+  <meta name="description" content="Calcule quanto carregar no cartão para as linhas Ubatuba ↔ Caraguatatuba ↔ São Sebastião."/>
+  <title>Calcula Passagem — Litoral Norte SP</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c1b19'/%3E%3Cpath d='M6 20h20' stroke='%23f2ede3' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='20' r='3.5' fill='%230e7c6b'/%3E%3Ccircle cx='16' cy='20' r='3.5' fill='%23f2ede3'/%3E%3Ccircle cx='24' cy='20' r='3.5' fill='%23d0671a'/%3E%3C/svg%3E"/>
+  <script>document.documentElement.classList.add('js')</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --ocean: #0a1628;
-      --deep: #0d1f3c;
-      --wave: #1a3a5c;
-      --foam: #e8f4f8;
-      --sun: #f4a823;
-      --coral: #e85d3a;
-      --mint: #4ecdc4;
-      --white: #ffffff;
-      --line-a: #4ecdc4;
-      --line-b: #f4a823;
+      --paper: #f2ede3;
+      --card: #fbf9f4;
+      --ink: #1c1b19;
+      --ink-2: #4a4740;
+      --muted: #7a756a;
+      --rule: #ddd6c7;
+      --rule-soft: #e9e3d6;
+      --line-a: #0e7c6b;
+      --line-a-soft: #dcefe9;
+      --line-b: #c35f14;
+      --line-b-soft: #f7e6d6;
+      --sign: #ffb238;
+      --mono: 'IBM Plex Mono', ui-monospace, monospace;
+      --sans: 'Archivo', system-ui, sans-serif;
     }
+
+    html { -webkit-text-size-adjust: 100%; }
 
     body {
-      background: var(--ocean);
-      color: var(--foam);
-      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.45;
       min-height: 100vh;
       overflow-x: hidden;
-      position: relative;
+      -webkit-font-smoothing: antialiased;
     }
 
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 80% 40% at 20% 80%, rgba(78,205,196,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(244,168,35,0.06) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
+    body.is-loading { overflow: hidden; }
+
+    /* ─── LOADING ─────────────────────────────────── */
+    .loader {
+      position: fixed; inset: 0; z-index: 50;
+      background: var(--paper);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 22px;
+      transition: opacity .45s ease, visibility .45s ease;
+      /* Garante que some mesmo se o JS falhar */
+      animation: loaderFailsafe 0s 4s forwards;
     }
 
+    .loader.is-done { opacity: 0; visibility: hidden; }
+
+    .loader-route { width: min(300px, 78vw); height: auto; overflow: visible; }
+
+    .loader-route .track { stroke: var(--rule); stroke-width: 4; stroke-linecap: round; }
+    .loader-route .trail {
+      stroke: var(--ink); stroke-width: 4; stroke-linecap: round;
+      stroke-dasharray: 240; stroke-dashoffset: 240;
+      animation: trail 1.5s cubic-bezier(.55,.1,.35,1) .15s forwards;
+    }
+    .loader-route .stop { fill: var(--paper); stroke: var(--rule); stroke-width: 3; }
+    .loader-route .stop.s1 { animation: stopA .2s .15s forwards; }
+    .loader-route .stop.s2 { animation: stopMid .2s .85s forwards; }
+    .loader-route .stop.s3 { animation: stopB .2s 1.6s forwards; }
+    .loader-route .bus {
+      animation: drive 1.5s cubic-bezier(.55,.1,.35,1) .15s forwards;
+    }
+
+    .loader-label {
+      font-family: var(--mono);
+      font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--muted);
+      display: flex; justify-content: space-between;
+      width: min(340px, 90vw);
+    }
+    .loader-label span { opacity: .35; transition: opacity .2s; }
+    .loader-label span:nth-child(1) { animation: lit .2s .15s forwards; }
+    .loader-label span:nth-child(2) { animation: lit .2s .85s forwards; }
+    .loader-label span:nth-child(3) { animation: lit .2s 1.6s forwards; }
+
+    @keyframes trail { to { stroke-dashoffset: 0; } }
+    @keyframes drive { from { transform: translateX(0); } to { transform: translateX(240px); } }
+    @keyframes stopA { to { fill: var(--line-a); stroke: var(--line-a); } }
+    @keyframes stopMid { to { fill: var(--card); stroke: var(--ink); } }
+    @keyframes stopB { to { fill: var(--line-b); stroke: var(--line-b); } }
+    @keyframes lit { to { opacity: 1; color: var(--ink); } }
+    @keyframes loaderFailsafe { to { opacity: 0; visibility: hidden; } }
+
+    /* ─── LETREIRO ───────────────────────────────── */
+    .sign {
+      background: var(--ink);
+      color: var(--sign);
+      font-family: var(--mono);
+      font-size: 12px; font-weight: 500;
+      letter-spacing: .16em; text-transform: uppercase;
+      white-space: nowrap; overflow: hidden;
+      padding: 9px 0;
+    }
+    .sign-inner {
+      display: inline-flex; gap: 48px;
+      padding-left: 100%;
+      animation: marquee 26s linear infinite;
+    }
+    .sign-inner span::before { content: '●'; margin-right: 12px; font-size: 8px; vertical-align: 2px; opacity: .7; }
+    @keyframes marquee { to { transform: translateX(-100%); } }
+
+    /* ─── LAYOUT ─────────────────────────────────── */
     .wrapper {
-      position: relative;
-      z-index: 1;
-      max-width: 680px;
+      max-width: 640px;
       margin: 0 auto;
-      padding: 40px 20px 80px;
+      padding: 36px 16px 64px;
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 40px;
-      animation: fadeUp 0.5s ease both;
-    }
+    .js .reveal { opacity: 0; transform: translateY(10px); }
+    .ready .reveal { animation: rise .55s cubic-bezier(.2,.7,.2,1) forwards; }
+    .ready .reveal:nth-of-type(2) { animation-delay: .06s; }
+    .ready .reveal:nth-of-type(3) { animation-delay: .12s; }
+    .ready .reveal:nth-of-type(4) { animation-delay: .18s; }
+    .ready .reveal:nth-of-type(5) { animation-delay: .24s; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
 
-    .header-tag {
-      display: inline-block;
-      background: var(--wave);
-      border: 1px solid rgba(78,205,196,0.3);
-      color: var(--mint);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      padding: 6px 16px;
-      border-radius: 100px;
-      margin-bottom: 18px;
+    /* ─── CABEÇALHO ──────────────────────────────── */
+    header { margin-bottom: 28px; }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
     }
 
     h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(44px, 11vw, 72px);
-      line-height: 0.9;
-      color: var(--white);
-    }
-
-    h1 span { color: var(--mint); }
-
-    .subtitle {
-      margin-top: 12px;
-      font-size: 14px;
-      color: rgba(232,244,248,0.5);
-      font-weight: 300;
-    }
-
-    .routes-info {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 28px;
-      animation: fadeUp 0.5s 0.1s ease both;
-    }
-
-    .route-badge {
-      background: var(--deep);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 14px;
-      padding: 16px 18px;
-    }
-
-    .route-badge.line-a { border-top: 3px solid var(--line-a); }
-    .route-badge.line-b { border-top: 3px solid var(--line-b); }
-
-    .route-badge .rl { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.45; }
-    .route-badge .rn { font-size: 13px; font-weight: 500; color: var(--white); margin-top: 3px; }
-    .route-badge .rp { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin-top: 6px; }
-    .route-badge.line-a .rp { color: var(--line-a); }
-    .route-badge.line-b .rp { color: var(--line-b); }
-
-    .builder-card {
-      background: var(--deep);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 20px;
-      padding: 26px;
-      margin-bottom: 14px;
-      animation: fadeUp 0.5s 0.15s ease both;
-    }
-
-    .builder-card h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px;
-      letter-spacing: 1px;
-      margin-bottom: 20px;
-    }
-
-    .sec-label {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 2.5px;
+      font-size: clamp(46px, 13vw, 78px);
+      font-weight: 850;
+      font-stretch: 72%;
+      line-height: .86;
+      letter-spacing: -.01em;
       text-transform: uppercase;
-      color: rgba(232,244,248,0.35);
-      margin: 18px 0 10px;
+    }
+    h1 em { font-style: normal; color: var(--line-a); }
+
+    .lede {
+      margin-top: 14px;
+      max-width: 38ch;
+      color: var(--ink-2);
+      font-size: 15px;
     }
 
-    .sec-label:first-of-type { margin-top: 0; }
-
-    .trip-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      gap: 12px;
-    }
-
-    .trip-row:last-of-type { border-bottom: none; }
-
-    .trip-info { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-
-    .trip-name {
-      font-weight: 500;
-      font-size: 14px;
-      color: var(--white);
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .trip-sub { font-size: 11px; color: rgba(232,244,248,0.38); padding-left: 14px; }
-
-    .counter {
-      display: flex;
-      align-items: center;
-      background: var(--wave);
-      border-radius: 10px;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-
-    .counter button {
-      width: 34px; height: 34px;
-      background: none; border: none;
-      color: var(--white); font-size: 18px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s;
-    }
-
-    .counter button:hover { background: rgba(255,255,255,0.1); }
-
-    .counter input {
-      width: 38px;
-      text-align: center;
-      background: none; border: none;
-      color: var(--white);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px;
-      outline: none;
-    }
-
-    .counter input::-webkit-inner-spin-button,
-    .counter input::-webkit-outer-spin-button { -webkit-appearance: none; }
-
-    .divider {
-      display: flex; align-items: center; gap: 10px;
-      margin: 20px 0;
-      color: rgba(232,244,248,0.2);
-      font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
-    }
-
-    .divider::before, .divider::after {
-      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06);
-    }
-
-    .btn-reset {
-      display: block; width: 100%;
-      padding: 13px;
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 10px;
-      color: rgba(232,244,248,0.45);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12px; font-weight: 600;
-      letter-spacing: 1.5px; text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-top: 18px;
-    }
-
-    .btn-reset:hover {
-      background: rgba(78,205,196,0.08);
-      border-color: rgba(78,205,196,0.3);
-      color: var(--mint);
-    }
-
-    /* RESULT */
-    .result-card {
-      background: linear-gradient(140deg, var(--wave), #0f2a46);
-      border: 1px solid rgba(78,205,196,0.18);
-      border-radius: 20px;
-      padding: 26px;
-      animation: fadeUp 0.5s 0.2s ease both;
-    }
-
-    .result-card h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px; letter-spacing: 1px;
+    /* ─── MAPA DA LINHA ─────────────────────────── */
+    .map {
+      background: var(--card);
+      border: 1px solid var(--rule);
+      border-radius: 14px;
+      padding: 22px 18px 18px;
       margin-bottom: 18px;
     }
 
-    .empty-state {
-      text-align: center; padding: 28px;
-      color: rgba(232,244,248,0.28); font-size: 14px;
+    .map-line {
+      position: relative;
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr auto;
+      align-items: center;
     }
 
-    .breakdown { margin-bottom: 20px; }
+    .map-seg { height: 6px; border-radius: 3px; }
+    .map-seg.a { background: var(--line-a); }
+    .map-seg.b { background: var(--line-b); }
 
-    .bd-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 9px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      font-size: 13px; color: rgba(232,244,248,0.6);
+    .map-stop {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--card);
+      border: 4px solid var(--ink);
+      position: relative; z-index: 1;
+      margin: 0 -2px;
     }
 
-    .bd-item:last-child { border-bottom: none; }
+    .map-labels {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      margin-top: 10px;
+      font-size: 13px; font-weight: 650;
+      font-stretch: 85%;
+    }
+    .map-labels span:nth-child(2) { text-align: center; }
+    .map-labels span:nth-child(3) { text-align: right; }
 
-    .bd-left { display: flex; align-items: center; gap: 8px; }
-
-    .qty { background: rgba(255,255,255,0.07); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--white); }
-
-    .bd-price { font-weight: 600; color: var(--white); }
-
-    .line-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-
-    .ltb {
-      border-radius: 14px; padding: 15px;
-      display: flex; flex-direction: column; gap: 3px;
+    .map-fares {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--rule);
     }
 
-    .ltb.la { background: rgba(78,205,196,0.08); border: 1px solid rgba(78,205,196,0.22); }
-    .ltb.lb { background: rgba(244,168,35,0.08); border: 1px solid rgba(244,168,35,0.22); }
+    .fare { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .fare:last-child { justify-content: flex-end; text-align: right; }
 
-    .ltb .ll { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.55; }
-    .ltb.la .ll { color: var(--line-a); }
-    .ltb.lb .ll { color: var(--line-b); }
+    .tag {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 22px; height: 22px; padding: 0 6px;
+      border-radius: 5px;
+      font-size: 12px; font-weight: 800;
+      color: #fff;
+    }
+    .tag.a { background: var(--line-a); }
+    .tag.b { background: var(--line-b); }
 
-    .ltb .lr { font-size: 12px; color: var(--white); font-weight: 500; margin-top: 1px; }
-    .ltb .lv { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin-top: 4px; }
-    .ltb.la .lv { color: var(--line-a); }
-    .ltb.lb .lv { color: var(--line-b); }
+    .fare-price { font-family: var(--mono); font-weight: 600; font-size: 17px; }
+    .fare small { display: block; width: 100%; font-size: 12px; color: var(--muted); }
 
-    .ltb .lt { font-size: 11px; color: rgba(232,244,248,0.35); }
-
-    .grand {
-      display: flex; justify-content: space-between; align-items: center;
-      background: rgba(255,255,255,0.05);
-      border-radius: 14px; padding: 16px 18px;
+    /* ─── BLOCOS ─────────────────────────────────── */
+    .block {
+      background: var(--card);
+      border: 1px solid var(--rule);
+      border-radius: 14px;
+      padding: 22px 18px;
+      margin-bottom: 18px;
     }
 
-    .grand .gl { font-weight: 600; font-size: 14px; color: var(--white); }
-    .grand .gv { font-family: 'Bebas Neue', sans-serif; font-size: 38px; color: var(--mint); }
-
-    .trips-badge {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      background: rgba(167,139,250,0.1);
-      border: 1px solid rgba(167,139,250,0.25);
-      border-radius: 12px;
-      padding: 12px 16px;
-      margin-top: 12px;
-      font-size: 13px; color: rgba(232,244,248,0.7);
+    .block-head {
+      display: flex; align-items: baseline; gap: 12px;
+      margin-bottom: 16px;
     }
 
-    .trips-badge strong {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px; color: #a78bfa;
+    .step {
+      font-family: var(--mono);
+      font-size: 12px; font-weight: 600;
+      color: var(--muted);
+    }
+
+    .block h2 {
+      font-size: 24px;
+      font-weight: 800;
+      font-stretch: 78%;
+      text-transform: uppercase;
+      letter-spacing: .005em;
       line-height: 1;
     }
 
-    .value-card {
-      background: var(--deep);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 20px;
-      padding: 26px;
-      margin-bottom: 14px;
-      animation: fadeUp 0.5s 0.25s ease both;
-    }
+    .hint { font-size: 13px; color: var(--muted); margin: -8px 0 14px; }
 
-    .value-card h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px; letter-spacing: 1px;
-      margin-bottom: 20px;
-    }
-
-    .value-input-wrap {
+    /* Valor */
+    .money {
       display: flex; align-items: center;
-      background: var(--wave);
-      border-radius: 12px;
-      padding: 0 16px;
+      border: 2px solid var(--ink);
+      border-radius: 10px;
+      background: #fff;
+      padding: 0 14px;
       gap: 8px;
+      transition: box-shadow .15s;
+    }
+    .money:focus-within { box-shadow: 0 0 0 4px rgba(14,124,107,.18); }
+
+    .money span { font-family: var(--mono); font-weight: 600; color: var(--muted); font-size: 18px; }
+
+    .money input {
+      flex: 1; min-width: 0;
+      border: 0; outline: 0; background: none;
+      font-family: var(--mono); font-weight: 600;
+      font-size: 26px; color: var(--ink);
+      padding: 12px 0;
+    }
+    .money input::placeholder { color: #c5bfb2; }
+    .money input::-webkit-inner-spin-button,
+    .money input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .money input[type=number] { -moz-appearance: textfield; }
+
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+
+    .cell {
+      border-radius: 10px;
+      padding: 12px 14px;
+      border-left: 5px solid;
+    }
+    .cell.a { background: var(--line-a-soft); border-color: var(--line-a); }
+    .cell.b { background: var(--line-b-soft); border-color: var(--line-b); }
+
+    .cell-top { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+    .cell-val { font-family: var(--mono); font-weight: 600; font-size: 21px; margin-top: 6px; }
+    .cell-sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+    .nw { white-space: nowrap; }
+
+    .trips {
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 10px;
+      padding: 12px 14px;
+      border: 1px dashed var(--rule);
+      border-radius: 10px;
+      font-size: 13px; color: var(--ink-2);
+    }
+    .trips strong {
+      font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--ink);
+      min-width: 1.4em; text-align: center;
     }
 
-    .value-input-wrap span {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px; color: var(--mint);
+    /* Montar viagem */
+    .group-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: var(--ink-2);
+      margin: 20px 0 4px;
+    }
+    .group-title:first-of-type { margin-top: 0; }
+    .group-title .price { margin-left: auto; font-family: var(--mono); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); }
+
+    .row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--rule-soft);
+    }
+    .row:last-of-type { border-bottom: 0; }
+
+    .row-name { font-size: 15px; font-weight: 550; }
+    .row-name .arrow { color: var(--muted); font-weight: 400; margin: 0 3px; }
+    .row-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .featured {
+      background: var(--paper);
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 8px;
+      border-bottom: 0;
     }
 
-    .value-input-wrap input {
-      flex: 1; background: none; border: none;
-      color: var(--white);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 28px; padding: 12px 0;
-      outline: none;
+    .or {
+      display: flex; align-items: center; gap: 12px;
+      margin: 18px 0 6px;
+      font-family: var(--mono);
+      font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted);
+    }
+    .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+    .counter {
+      display: flex; align-items: center;
+      border: 1.5px solid var(--ink);
+      border-radius: 9px;
+      background: #fff;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .counter button {
+      width: 40px; height: 40px;
+      border: 0; background: none;
+      font: 500 20px/1 var(--mono);
+      color: var(--ink);
+      cursor: pointer;
+      transition: background .12s;
+      touch-action: manipulation;
+    }
+    .counter button:hover { background: var(--paper); }
+    .counter button:active { background: var(--rule); }
+    .counter button:focus-visible { outline: 2px solid var(--line-a); outline-offset: -2px; }
+    .counter input {
+      width: 36px; height: 40px;
+      text-align: center;
+      border: 0; outline: 0; background: none;
+      border-left: 1px solid var(--rule-soft);
+      border-right: 1px solid var(--rule-soft);
+      font: 600 17px var(--mono);
+      color: var(--ink);
+      -moz-appearance: textfield;
+    }
+    .counter input::-webkit-inner-spin-button,
+    .counter input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .btn-reset {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 16px;
+      padding: 10px 14px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: none;
+      font: 600 13px var(--sans);
+      color: var(--ink-2);
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-reset:hover { border-color: var(--ink); color: var(--ink); }
+
+    /* ─── BILHETE (RESUMO) ───────────────────────── */
+    .ticket {
+      position: relative;
+      background: var(--card);
+      border: 1px solid var(--rule);
+      border-radius: 14px;
+      margin-bottom: 18px;
+      overflow: hidden;
     }
 
-    .value-input-wrap input::placeholder { color: rgba(255,255,255,0.2); }
+    .ticket-top { padding: 22px 18px 18px; }
 
-    .split-result {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 10px; margin-top: 16px;
+    .ticket-stub {
+      position: relative;
+      padding: 18px;
+      background: var(--ink);
+      color: var(--paper);
+    }
+    .ticket-stub::before {
+      content: '';
+      position: absolute; left: 0; right: 0; top: -1px;
+      height: 10px;
+      background: radial-gradient(circle at 6px -1px, var(--card) 5px, transparent 5.5px) 0 0 / 12px 10px repeat-x;
     }
 
-    .split-item {
-      border-radius: 14px; padding: 15px;
-      display: flex; flex-direction: column; gap: 3px;
+    .empty {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px;
+      border: 1px dashed var(--rule);
+      border-radius: 10px;
+      color: var(--muted); font-size: 14px;
     }
 
-    .split-item.la { background: rgba(78,205,196,0.08); border: 1px solid rgba(78,205,196,0.22); }
-    .split-item.lb { background: rgba(244,168,35,0.08); border: 1px solid rgba(244,168,35,0.22); }
+    .lines { list-style: none; }
+    .lines li {
+      display: flex; align-items: baseline; gap: 10px;
+      padding: 8px 0;
+      font-size: 14px;
+    }
+    .lines li + li { border-top: 1px dotted var(--rule); }
+    .lines .q { font-family: var(--mono); font-weight: 600; min-width: 2.6em; color: var(--ink-2); }
+    .lines .n { flex: 1; }
+    .lines .n .tag { margin-right: 6px; transform: translateY(-1px); height: 18px; min-width: 18px; font-size: 11px; }
+    .lines .v { font-family: var(--mono); font-weight: 500; white-space: nowrap; }
 
-    .split-item .sl { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.55; }
-    .split-item.la .sl { color: var(--line-a); }
-    .split-item.lb .sl { color: var(--line-b); }
+    .ticket .split { margin-top: 14px; }
 
-    .split-item .sv { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin-top: 4px; }
-    .split-item.la .sv { color: var(--line-a); }
-    .split-item.lb .sv { color: var(--line-b); }
-
-    .split-item .st { font-size: 11px; color: rgba(232,244,248,0.35); }
+    .total {
+      display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;
+    }
+    .total-label {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--sign);
+    }
+    .total-sub { font-size: 13px; opacity: .7; margin-top: 4px; }
+    .total-val {
+      font-family: var(--mono); font-weight: 600;
+      font-size: clamp(28px, 9vw, 38px);
+      line-height: 1;
+      white-space: nowrap;
+    }
 
     footer {
-      text-align: center; margin-top: 44px;
-      font-size: 11px; color: rgba(232,244,248,0.18);
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 11px; letter-spacing: .08em;
+      color: var(--muted);
+      margin-top: 36px;
     }
 
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(14px); }
-      to { opacity: 1; transform: translateY(0); }
+    @media (max-width: 420px) {
+      .map-labels { font-size: 12px; }
+      .row-name { font-size: 14px; }
+      .counter button { width: 36px; }
+      .cell-val { font-size: 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+      .sign-inner { animation: none; padding-left: 16px; }
+      .js .reveal { opacity: 1; transform: none; }
     }
   </style>
 </head>
-<body>
-<div class="wrapper">
+<body class="is-loading">
 
-  <header>
-    <div class="header-tag">🚌 Litoral Norte SP</div>
-    <h1>CALCULA<span>PASSAGEM</span></h1>
-    <p class="subtitle">Ubatuba · Caraguatatuba · São Sebastião</p>
-  </header>
-
-  <div class="routes-info">
-    <div class="route-badge line-a">
-      <div class="rl">Linha A</div>
-      <div class="rn">Ubatuba ↔ Caraguatatuba</div>
-      <div class="rp">R$ 6,40</div>
-    </div>
-    <div class="route-badge line-b">
-      <div class="rl">Linha B</div>
-      <div class="rn">Caraguatatuba ↔ São Sebastião</div>
-      <div class="rp">R$ 3,70</div>
-    </div>
-  </div>
-
-   <div class="value-card">
-    <h2>💵 CALCULAR POR VALOR</h2>
-    <div class="value-input-wrap">
-      <span>R$</span>
-      <input type="number" id="valor-input" placeholder="0,00" min="0" step="0.01" oninput="calcByValue()"/>
-    </div>
-    <div id="split-result"></div>
-  </div>
-
-  <div class="builder-card">
-    <h2>🗺️ MONTE SUA VIAGEM</h2>
-
-    <div class="sec-label">Viagem completa — Ubatuba ↔ São Sebastião</div>
-
-    <div class="trip-row">
-      <div class="trip-info">
-        <span class="trip-name">
-          <span class="dot" style="background:#a78bfa"></span>
-          Ida e volta completa
-        </span>
-        <span class="trip-sub">Ubatuba→Caraguá→SS e SS→Caraguá→Ubatuba = R$ 20,20</span>
-      </div>
-      <div class="counter">
-        <button onclick="change('full_rt', -1)">−</button>
-        <input type="number" id="full_rt" value="0" min="0" oninput="update()"/>
-        <button onclick="change('full_rt', 1)">+</button>
-      </div>
-    </div>
-
-    <div class="divider">ou trechos individuais</div>
-
-    <div class="sec-label">Linha A — Ubatuba ↔ Caraguatatuba (R$ 6,40 por trecho)</div>
-
-    <div class="trip-row">
-      <div class="trip-info">
-        <span class="trip-name"><span class="dot" style="background:var(--line-a)"></span>Ida: Ubatuba → Caraguatatuba</span>
-      </div>
-      <div class="counter">
-        <button onclick="change('a_uba_cg', -1)">−</button>
-        <input type="number" id="a_uba_cg" value="0" min="0" oninput="update()"/>
-        <button onclick="change('a_uba_cg', 1)">+</button>
-      </div>
-    </div>
-
-    <div class="trip-row">
-      <div class="trip-info">
-        <span class="trip-name"><span class="dot" style="background:var(--line-a)"></span>Volta: Caraguatatuba → Ubatuba</span>
-      </div>
-      <div class="counter">
-        <button onclick="change('a_cg_uba', -1)">−</button>
-        <input type="number" id="a_cg_uba" value="0" min="0" oninput="update()"/>
-        <button onclick="change('a_cg_uba', 1)">+</button>
-      </div>
-    </div>
-
-    <div class="sec-label" style="margin-top:18px">Linha B — Caraguatatuba ↔ São Sebastião (R$ 3,70 por trecho)</div>
-
-    <div class="trip-row">
-      <div class="trip-info">
-        <span class="trip-name"><span class="dot" style="background:var(--line-b)"></span>Ida: Caraguatatuba → São Sebastião</span>
-      </div>
-      <div class="counter">
-        <button onclick="change('b_cg_ss', -1)">−</button>
-        <input type="number" id="b_cg_ss" value="0" min="0" oninput="update()"/>
-        <button onclick="change('b_cg_ss', 1)">+</button>
-      </div>
-    </div>
-
-    <div class="trip-row">
-      <div class="trip-info">
-        <span class="trip-name"><span class="dot" style="background:var(--line-b)"></span>Volta: São Sebastião → Caraguatatuba</span>
-      </div>
-      <div class="counter">
-        <button onclick="change('b_ss_cg', -1)">−</button>
-        <input type="number" id="b_ss_cg" value="0" min="0" oninput="update()"/>
-        <button onclick="change('b_ss_cg', 1)">+</button>
-      </div>
-    </div>
-
-    <button class="btn-reset" onclick="resetAll()">↺ Zerar tudo</button>
-  </div>
-
-  <div class="result-card">
-    <h2>💰 RESUMO DO VALOR</h2>
-    <div id="result-body">
-      <div class="empty-state">Adicione viagens acima para calcular 👆</div>
-    </div>
-  </div>
-
+<div class="loader" id="loader" role="status" aria-label="Carregando">
+  <svg class="loader-route" viewBox="-10 -26 260 44" aria-hidden="true">
+    <line class="track" x1="0" y1="8" x2="240" y2="8"/>
+    <line class="trail" x1="0" y1="8" x2="240" y2="8"/>
+    <circle class="stop s1" cx="0" cy="8" r="7"/>
+    <circle class="stop s2" cx="120" cy="8" r="7"/>
+    <circle class="stop s3" cx="240" cy="8" r="7"/>
+    <g class="bus">
+      <g transform="translate(-14 -24)">
+        <rect x="0" y="0" width="28" height="17" rx="4" fill="#1c1b19"/>
+        <rect x="3" y="3" width="6" height="5" rx="1" fill="#f2ede3"/>
+        <rect x="11" y="3" width="6" height="5" rx="1" fill="#f2ede3"/>
+        <rect x="19" y="3" width="6" height="5" rx="1" fill="#ffb238"/>
+        <circle cx="7" cy="17" r="2.6" fill="#1c1b19" stroke="#f2ede3" stroke-width="1.4"/>
+        <circle cx="21" cy="17" r="2.6" fill="#1c1b19" stroke="#f2ede3" stroke-width="1.4"/>
+      </g>
+    </g>
+  </svg>
+  <div class="loader-label"><span>Ubatuba</span><span>Caraguá</span><span>São Sebastião</span></div>
 </div>
 
-<footer>Calculadora de passagens · Litoral Norte SP</footer>
+<div class="sign" aria-hidden="true">
+  <div class="sign-inner">
+    <span>Linha A · Ubatuba ⇄ Caraguatatuba · R$ 6,40</span>
+    <span>Linha B · Caraguatatuba ⇄ São Sebastião · R$ 3,70</span>
+    <span>Ida e volta completa · R$ 20,20</span>
+  </div>
+</div>
+
+<main class="wrapper" id="app">
+
+  <header class="reveal">
+    <p class="eyebrow">Litoral Norte · SP</p>
+    <h1>Calcula<br/><em>Passagem</em></h1>
+    <p class="lede">Descubra quanto carregar no cartão para ir e voltar entre Ubatuba, Caraguatatuba e São Sebastião.</p>
+  </header>
+
+  <section class="map reveal" aria-label="Mapa das linhas">
+    <div class="map-line" aria-hidden="true">
+      <span class="map-stop"></span>
+      <span class="map-seg a"></span>
+      <span class="map-stop"></span>
+      <span class="map-seg b"></span>
+      <span class="map-stop"></span>
+    </div>
+    <div class="map-labels">
+      <span>Ubatuba</span><span>Caraguatatuba</span><span>São Sebastião</span>
+    </div>
+    <div class="map-fares">
+      <div class="fare"><span class="tag a">A</span><span class="fare-price">R$ 6,40</span><small>por trecho</small></div>
+      <div class="fare"><span class="tag b">B</span><span class="fare-price">R$ 3,70</span><small>por trecho</small></div>
+    </div>
+  </section>
+
+  <section class="block reveal">
+    <div class="block-head"><span class="step">01</span><h2>Quanto você tem?</h2></div>
+    <p class="hint">Digite o valor e veja como dividir entre as duas linhas.</p>
+    <label class="money">
+      <span>R$</span>
+      <input type="number" id="valor-input" inputmode="decimal" placeholder="0,00" min="0" step="0.01" oninput="calcByValue()" aria-label="Valor disponível em reais"/>
+    </label>
+    <div id="split-result"></div>
+  </section>
+
+  <section class="block reveal">
+    <div class="block-head"><span class="step">02</span><h2>Monte sua viagem</h2></div>
+
+    <div class="row featured">
+      <div>
+        <div class="row-name">Ida e volta completa</div>
+        <div class="row-sub">Ubatuba → São Sebastião → Ubatuba · R$ 20,20</div>
+      </div>
+      <div class="counter">
+        <button type="button" onclick="change('full_rt', -1)" aria-label="Diminuir ida e volta completa">−</button>
+        <input type="number" id="full_rt" value="0" min="0" inputmode="numeric" oninput="update()" aria-label="Ida e volta completa"/>
+        <button type="button" onclick="change('full_rt', 1)" aria-label="Aumentar ida e volta completa">+</button>
+      </div>
+    </div>
+
+    <div class="or">ou por trecho</div>
+
+    <div class="group-title"><span class="tag a">A</span> Ubatuba ⇄ Caraguá <span class="price">R$ 6,40</span></div>
+
+    <div class="row">
+      <div class="row-name">Ubatuba <span class="arrow">→</span> Caraguá</div>
+      <div class="counter">
+        <button type="button" onclick="change('a_uba_cg', -1)" aria-label="Diminuir">−</button>
+        <input type="number" id="a_uba_cg" value="0" min="0" inputmode="numeric" oninput="update()" aria-label="Ubatuba para Caraguatatuba"/>
+        <button type="button" onclick="change('a_uba_cg', 1)" aria-label="Aumentar">+</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-name">Caraguá <span class="arrow">→</span> Ubatuba</div>
+      <div class="counter">
+        <button type="button" onclick="change('a_cg_uba', -1)" aria-label="Diminuir">−</button>
+        <input type="number" id="a_cg_uba" value="0" min="0" inputmode="numeric" oninput="update()" aria-label="Caraguatatuba para Ubatuba"/>
+        <button type="button" onclick="change('a_cg_uba', 1)" aria-label="Aumentar">+</button>
+      </div>
+    </div>
+
+    <div class="group-title"><span class="tag b">B</span> Caraguá ⇄ S. Sebastião <span class="price">R$ 3,70</span></div>
+
+    <div class="row">
+      <div class="row-name">Caraguá <span class="arrow">→</span> São Sebastião</div>
+      <div class="counter">
+        <button type="button" onclick="change('b_cg_ss', -1)" aria-label="Diminuir">−</button>
+        <input type="number" id="b_cg_ss" value="0" min="0" inputmode="numeric" oninput="update()" aria-label="Caraguatatuba para São Sebastião"/>
+        <button type="button" onclick="change('b_cg_ss', 1)" aria-label="Aumentar">+</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-name">São Sebastião <span class="arrow">→</span> Caraguá</div>
+      <div class="counter">
+        <button type="button" onclick="change('b_ss_cg', -1)" aria-label="Diminuir">−</button>
+        <input type="number" id="b_ss_cg" value="0" min="0" inputmode="numeric" oninput="update()" aria-label="São Sebastião para Caraguatatuba"/>
+        <button type="button" onclick="change('b_ss_cg', 1)" aria-label="Aumentar">+</button>
+      </div>
+    </div>
+
+    <button type="button" class="btn-reset" onclick="resetAll()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+      Zerar tudo
+    </button>
+  </section>
+
+  <section class="ticket reveal" aria-live="polite">
+    <div class="ticket-top">
+      <div class="block-head"><span class="step">03</span><h2>Resumo</h2></div>
+      <div id="result-body"></div>
+    </div>
+    <div class="ticket-stub">
+      <div class="total">
+        <div>
+          <div class="total-label">Total a carregar</div>
+          <div class="total-sub" id="total-sub">Nenhuma viagem ainda</div>
+        </div>
+        <div class="total-val" id="total-val">R$ 0,00</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Calcula Passagem · Litoral Norte SP</footer>
+</main>
 
 <script>
   const PA = 6.40;
@@ -510,9 +637,35 @@
 
   function fmt(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); }
 
+  function plural(n, s, p) { return n === 1 ? s : p; }
+
   function resetAll() {
     ['full_rt','a_uba_cg','a_cg_uba','b_cg_ss','b_ss_cg'].forEach(id => document.getElementById(id).value = 0);
     update();
+  }
+
+  function splitHTML(qA, qB) {
+    return `
+      <div class="split">
+        <div class="cell a">
+          <div class="cell-top"><span class="tag a">A</span> Linha A</div>
+          <div class="cell-val">${fmt(qA * PA)}</div>
+          <div class="cell-sub">${qA} ${plural(qA, 'passagem', 'passagens')} <span class="nw">× R$ 6,40</span></div>
+        </div>
+        <div class="cell b">
+          <div class="cell-top"><span class="tag b">B</span> Linha B</div>
+          <div class="cell-val">${fmt(qB * PB)}</div>
+          <div class="cell-sub">${qB} ${plural(qB, 'passagem', 'passagens')} <span class="nw">× R$ 3,70</span></div>
+        </div>
+      </div>`;
+  }
+
+  function tripsHTML(n) {
+    return `
+      <div class="trips">
+        <strong>${n}</strong>
+        <span>${plural(n, 'viagem completa', 'viagens completas')} de ida e volta entre Ubatuba e São Sebastião</span>
+      </div>`;
   }
 
   function update() {
@@ -529,69 +682,38 @@
     const grand = valA + valB;
 
     const rb = document.getElementById('result-body');
+    const tv = document.getElementById('total-val');
+    const ts = document.getElementById('total-sub');
+
+    tv.textContent = fmt(grand);
 
     if (full + aUC + aCU + bCS + bSC === 0) {
-      rb.innerHTML = '<div class="empty-state">Adicione viagens acima para calcular 👆</div>';
+      rb.innerHTML = '<div class="empty">Use os botões <strong>+</strong> acima para adicionar viagens.</div>';
+      ts.textContent = 'Nenhuma viagem ainda';
       return;
     }
 
-    // Breakdown rows
     const rows = [
-      { label: 'Ida+volta completa — Linha A (×2 trechos)', qty: full * 2, price: PA, cls: 'fa', show: full > 0 },
-      { label: 'Ida+volta completa — Linha B (×2 trechos)', qty: full * 2, price: PB, cls: 'fb', show: full > 0 },
-      { label: 'Ida Ubatuba → Caraguatatuba',               qty: aUC,      price: PA, cls: 'fa', show: aUC > 0 },
-      { label: 'Volta Caraguatatuba → Ubatuba',             qty: aCU,      price: PA, cls: 'fa', show: aCU > 0 },
-      { label: 'Ida Caraguatatuba → São Sebastião',         qty: bCS,      price: PB, cls: 'fb', show: bCS > 0 },
-      { label: 'Volta São Sebastião → Caraguatatuba',       qty: bSC,      price: PB, cls: 'fb', show: bSC > 0 },
+      { label: 'Ida e volta completa · trechos A', qty: full * 2, price: PA, line: 'a', show: full > 0 },
+      { label: 'Ida e volta completa · trechos B', qty: full * 2, price: PB, line: 'b', show: full > 0 },
+      { label: 'Ubatuba → Caraguatatuba',          qty: aUC,      price: PA, line: 'a', show: aUC > 0 },
+      { label: 'Caraguatatuba → Ubatuba',          qty: aCU,      price: PA, line: 'a', show: aCU > 0 },
+      { label: 'Caraguatatuba → São Sebastião',    qty: bCS,      price: PB, line: 'b', show: bCS > 0 },
+      { label: 'São Sebastião → Caraguatatuba',    qty: bSC,      price: PB, line: 'b', show: bSC > 0 },
     ].filter(r => r.show);
 
-    let bdHTML = '<div class="breakdown">';
-    let parts = [];
-
-    rows.forEach(r => {
-      bdHTML += `
-        <div class="bd-item">
-          <span class="bd-left">
-            <span class="qty">${r.qty}×</span>
-            <span>${r.label}</span>
-          </span>
-          <span class="bd-price">${fmt(r.qty * r.price)}</span>
-        </div>`;
-      for (let i = 0; i < r.qty; i++) {
-        parts.push(`<span class="${r.cls}">${r.price.toFixed(2).replace('.', ',')}</span>`);
-      }
-    });
-
-    bdHTML += '</div>';
+    const list = '<ul class="lines">' + rows.map(r => `
+      <li>
+        <span class="q">${r.qty}×</span>
+        <span class="n"><span class="tag ${r.line}">${r.line.toUpperCase()}</span>${r.label}</span>
+        <span class="v">${fmt(r.qty * r.price)}</span>
+      </li>`).join('') + '</ul>';
 
     const completeTrips = Math.floor(Math.min(totalTicketsA, totalTicketsB) / 2);
+    const totalTickets = totalTicketsA + totalTicketsB;
 
-    const ltHTML = `
-      <div class="line-totals">
-        <div class="ltb la">
-          <div class="ll">Linha A</div>
-          <div class="lr">Ubatuba ↔ Caraguatatuba</div>
-          <div class="lv">${fmt(valA)}</div>
-          <div class="lt">${totalTicketsA} passagem${totalTicketsA !== 1 ? 's' : ''} × R$ 6,40</div>
-        </div>
-        <div class="ltb lb">
-          <div class="ll">Linha B</div>
-          <div class="lr">Caraguatatuba ↔ São Sebastião</div>
-          <div class="lv">${fmt(valB)}</div>
-          <div class="lt">${totalTicketsB} passagem${totalTicketsB !== 1 ? 's' : ''} × R$ 3,70</div>
-        </div>
-      </div>`;
-
-    const gHTML = `
-      <div class="grand">
-        <span class="gl">Total a carregar</span>
-        <span class="gv">${fmt(grand)}</span>
-      </div>
-      <div class="trips-badge">
-        🚌 <strong>${completeTrips}</strong> viagem${completeTrips !== 1 ? 's' : ''} completa${completeTrips !== 1 ? 's' : ''} (Ubatuba ↔ São Sebastião)
-      </div>`;
-
-    rb.innerHTML = bdHTML + ltHTML + gHTML;
+    rb.innerHTML = list + splitHTML(totalTicketsA, totalTicketsB) + tripsHTML(completeTrips);
+    ts.textContent = `${totalTickets} ${plural(totalTickets, 'passagem', 'passagens')} no total`;
   }
 
   function calcByValue() {
@@ -611,30 +733,34 @@
 
     const qA = sets + extraA;
     const qB = sets + extraB;
-    const vA = qA * PA;
-    const vB = qB * PB;
 
-    const completeTripsVal = Math.floor(Math.min(qA, qB) / 2);
-
-    sr.innerHTML = `
-      <div class="split-result">
-        <div class="split-item la">
-          <div class="sl">Linha A</div>
-          <div class="sv">${fmt(vA)}</div>
-          <div class="st">${qA} passagem${qA !== 1 ? 's' : ''} × R$ 6,40</div>
-        </div>
-        <div class="split-item lb">
-          <div class="sl">Linha B</div>
-          <div class="sv">${fmt(vB)}</div>
-          <div class="st">${qB} passagem${qB !== 1 ? 's' : ''} × R$ 3,70</div>
-        </div>
-      </div>
-      <div class="trips-badge">
-        🚌 <strong>${completeTripsVal}</strong> viagem${completeTripsVal !== 1 ? 's' : ''} completa${completeTripsVal !== 1 ? 's' : ''} (Ubatuba ↔ São Sebastião)
-      </div>`;
+    sr.innerHTML = splitHTML(qA, qB) + tripsHTML(Math.floor(Math.min(qA, qB) / 2));
   }
 
   update();
+
+  // Tela de carregamento: mostra a animação da rota e libera a página
+  (function () {
+    const start = performance.now();
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const minTime = reduce ? 0 : 1900;
+    let done = false;
+
+    function finish() {
+      if (done) return;
+      done = true;
+      const wait = Math.max(0, minTime - (performance.now() - start));
+      setTimeout(() => {
+        document.getElementById('loader').classList.add('is-done');
+        document.body.classList.remove('is-loading');
+        document.body.classList.add('ready');
+      }, wait);
+    }
+
+    if (document.readyState === 'complete') finish();
+    else window.addEventListener('load', finish);
+    setTimeout(finish, 3000);
+  })();
 </script>
 </body>
 </html>
